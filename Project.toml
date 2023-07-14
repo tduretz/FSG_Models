@@ -1,0 +1,14 @@
+name = "FSG_Models"
+uuid = "d231de31-b0df-4997-8602-27ecd6dde6f9"
+authors = ["tduretz <duretz@uni-frankfurt.de>"]
+version = "0.1.0"
+
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+ExtendableSparse = "95c220a8-a1cf-11e9-0c77-dbfce5f500b3"
+IterativeSolvers = "42fd0dbc-a981-5370-80f2-aaf504508153"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MutableNamedTuples = "af6c499f-54b4-48cc-bbd2-094bba7533c7"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
