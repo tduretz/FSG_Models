@@ -70,7 +70,6 @@ function Mesh_y( X, y0, m, ymin0, ymax0, σy, options; h=0.0 )
     if options.topo
         z0    = -h                     # topography height
         y     = (y/ymin0)*((z0+m))-z0  # shift grid vertically
-        @show ymin0
     end   
     return y
 end
