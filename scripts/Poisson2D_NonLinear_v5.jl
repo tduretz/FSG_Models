@@ -6,16 +6,6 @@ Makie.update_theme!( fonts = ( regular = texfont(), bold = texfont(:bold), itali
 # Flux BC OK for centroids
 # Add ghost nodes to vertex arrays
 
-function JacobianFSG(nc)
-    Jacobian = (;
-    ξ = (∂x = (ex=zeros(nc.x+3, nc.y+2), ey=zeros(nc.x+2, nc.y+3), v=zeros(nc.x+3, nc.y+3), c=zeros(nc.x+2, nc.y+2)),
-         ∂y = (ex=zeros(nc.x+3, nc.y+2), ey=zeros(nc.x+2, nc.y+3), v=zeros(nc.x+3, nc.y+3), c=zeros(nc.x+2, nc.y+2)) ),
-    η = (∂x = (ex=zeros(nc.x+3, nc.y+2), ey=zeros(nc.x+2, nc.y+3), v=zeros(nc.x+3, nc.y+3), c=zeros(nc.x+2, nc.y+2)),
-         ∂y = (ex=zeros(nc.x+3, nc.y+2), ey=zeros(nc.x+2, nc.y+3), v=zeros(nc.x+3, nc.y+3), c=zeros(nc.x+2, nc.y+2)) ),
-    )
-return Jacobian
-end
-
 #--------------------------------------------------------------------#
 
 function u_anal(x, y)
@@ -68,8 +58,8 @@ function main()
     num  = (c=zeros(Int64, nce...), v=zeros(Int64, nve...))
     typ  = (c=zeros(Int64, nce...), v=zeros(Int64, nve...))
     val  = (c=zeros(nce...), v=zeros(nve...))
-    k    = (ex=zeros(nv.x,nc.y+2), ey=zeros(nc.x+2, nv.y))
-    q    = (x=(ex=zeros(nv.x,nc.y+2), ey=zeros(nc.x+2, nv.y)), y=(ex=zeros(nv.x,nc.y+2), ey=zeros(nc.x+2, nv.y)))
+    k    = (ex=zeros(nve.x, nce.y), ey=zeros(nce.x, nve.y))
+    q    = (x=(ex=zeros(nve.x, nce.y), ey=zeros(nce.x, nve.y)), y=(ex=zeros(nve.x, nce.y), ey=zeros(nce.x, nve.y)))
     ∂    = JacobianFSG(nc)
     # Mesh
     if adapt_mesh
@@ -84,8 +74,8 @@ function main()
         for i in eachindex(msh0.ξ)          
             X_msh[1] = msh0.ξ[i]
             X_msh[2] = msh0.η[i] 
-            xn[i]    = Mesh_x( X_msh, x0, m, xmin, xmax, σx, options; h=hn[i] )
-            yn[i]    = Mesh_y( X_msh, x0, m, ymin, ymax, σy, options; h=hn[i] )
+            xn[i]    = Mesh_x( X_msh, x0, x0, m, xmin, xmax, Amp, σx, σy, options )
+            yn[i]    = Mesh_y( X_msh, x0, x0, m, ymin, ymax, Amp, σx, σy, options )
         end
         # Compute slope
         if options.topo 
@@ -153,8 +143,7 @@ function main()
         end
         if (NLerr<1e-10) break end
         tol = NLerr/500
-        KSP_GCR!( δT, KJ, F, tol, 1, Lc; restart=10 )
-        # δT =  K\F
+        KSP_GCR!( δT, KJ, F, tol, 1, Lc; restart=30 )
         T.c[2:end-1,2:end-1] .-= δT[num.c[2:end-1,2:end-1]]
         T.v[2:end-1,2:end-1] .-= δT[num.v[2:end-1,2:end-1]]
     end
@@ -193,7 +182,7 @@ function main()
     # xlims!(ax, xmin, xmax); ylims!(ax, ymin, ymax)
     # ----
     ComputeConductivity!( k, q, T, typ, val, params, nc, ∂, Δ)
-    keff = avWESN( k.ey[2:end-1,:], k.ex[:,2:end-1])
+    keff = avWESN( k.ey[2:end-1,2:end-1], k.ex[2:end-1,2:end-1])
     ax  = Axis(fig[2, 1], title = L"$k$ - avg", xlabel = L"$x$ [km]", ylabel = L"$y$ [km]", aspect=1.0)
     minmax = (minimum(keff), maximum(keff)+1e-2)
     poly!(ax, pc, color = keff[:], colormap = :jet, strokewidth = 0, strokecolor = :white, markerstrokewidth = 0, markerstrokecolor = (0, 0, 0, 0), aspect=:image, colorrange=minmax)#, colorrange=limits
@@ -201,8 +190,9 @@ function main()
     # hm  = heatmap!(ax, x.v, y.v, keff, colormap=:jet)
     # Colorbar(fig[2, 2], hm, width = 20, labelsize = 25, ticklabelsize = 14 )
     # ----
-    ax  = Axis(fig[2, 3], title = L"$$Convergence", xlabel = L"$x$ [km]", ylabel = L"$y$ [km]", aspect=1.0)
-    hm  = lines!(ax, 1:NLiter, log10.(NLerrs[1:NLiter]))
+    ax  = Axis(fig[2, 3], title = L"$$Convergence", xlabel = L"$$Ietrations", ylabel = L"$y$ [km]", aspect=1.0)
+    lines!(ax, 1:NLiter, log10.(NLerrs[1:NLiter]))
+    scatter!(ax, 1:NLiter, log10.(NLerrs[1:NLiter]))
     display(fig)
 end 
 

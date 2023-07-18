@@ -2,6 +2,17 @@ module FSG_Models
 
     using Enzyme, CairoMakie, ExtendableSparse, Printf, LinearAlgebra, SparseArrays, MutableNamedTuples, IterativeSolvers
 
+    function JacobianFSG(nc)
+        Jacobian = (;
+        ξ = (∂x = (ex=zeros(nc.x+3, nc.y+2), ey=zeros(nc.x+2, nc.y+3), v=zeros(nc.x+3, nc.y+3), c=zeros(nc.x+2, nc.y+2)),
+             ∂y = (ex=zeros(nc.x+3, nc.y+2), ey=zeros(nc.x+2, nc.y+3), v=zeros(nc.x+3, nc.y+3), c=zeros(nc.x+2, nc.y+2)) ),
+        η = (∂x = (ex=zeros(nc.x+3, nc.y+2), ey=zeros(nc.x+2, nc.y+3), v=zeros(nc.x+3, nc.y+3), c=zeros(nc.x+2, nc.y+2)),
+             ∂y = (ex=zeros(nc.x+3, nc.y+2), ey=zeros(nc.x+2, nc.y+3), v=zeros(nc.x+3, nc.y+3), c=zeros(nc.x+2, nc.y+2)) ),
+        )
+        return Jacobian
+    end
+    export JacobianFSG
+
     @views avWESN(A,B)  = 0.25.*(A[:,1:end-1] .+ A[:,2:end-0] .+ B[1:end-1,:] .+ B[2:end-0,:])
     export avWESN
 

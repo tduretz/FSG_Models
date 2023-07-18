@@ -7,10 +7,10 @@ function Poisson2D( T, typ, val, k, b, ∂ξ∂x, ∂ξ∂y, ∂η∂x, ∂η∂
     kBC          = (W=params.kBC, E=params.kBC, S=params.kBC, N=params.kBC)
     if Frozen 
         BC_order = 1   # 1st order BC keeps preconditionner symmetric
-        ∂ξ∂x    .= 1.0 # neglect mesh distrortion to keep preconditionner symmetric
-        ∂ξ∂y    .= 0.0 # neglect mesh distrortion to keep preconditionner symmetric
-        ∂η∂x    .= 0.0 # neglect mesh distrortion to keep preconditionner symmetric
-        ∂η∂y    .= 1.0 # neglect mesh distrortion to keep preconditionner symmetric
+        ∂ξ∂x    .= 1.0 # neglect mesh distortion to keep preconditionner symmetric
+        ∂ξ∂y    .= 0.0 # neglect mesh distortion to keep preconditionner symmetric
+        ∂η∂x    .= 0.0 # neglect mesh distortion to keep preconditionner symmetric
+        ∂η∂y    .= 1.0 # neglect mesh distortion to keep preconditionner symmetric
     else 
         BC_order = 2 # 2nd order BC is what we aim for
     end
@@ -63,10 +63,17 @@ function Poisson2D( T, typ, val, k, b, ∂ξ∂x, ∂ξ∂y, ∂η∂x, ∂η∂
     # Fluxes
     qxW = -kW*∂T∂xW
     qxE = -kE*∂T∂xE
+    qxS = -kS*∂T∂xS
+    qxN = -kN*∂T∂xN
+    qyW = -kW*∂T∂yW
+    qyE = -kE*∂T∂yE
     qyS = -kS*∂T∂yS
     qyN = -kN*∂T∂yN
     # Balance
-    f  = b + ((qxE - qxW)/Δ.ξ * (∂ξ∂x[1] + ∂ξ∂y[1]) + (qyN - qyS)/Δ.η * (∂η∂x[1] + ∂η∂y[1]))
+    # f  = b + ((qxE - qxW)/Δ.ξ  + (qyN - qyS)/Δ.η)
+    # f  = b + ((qxE - qxW)/Δ.ξ * (∂ξ∂x[1] + ∂ξ∂y[1]) + (qyN - qyS)/Δ.η * (∂η∂x[1] + ∂η∂y[1]))
+    f  = b + ( (qxE - qxW)/Δ.ξ * ∂ξ∂x[1] + (qxN - qxS)/Δ.η * ∂η∂x[1] ) + ( (qyE - qyW)/Δ.ξ * ∂ξ∂y[1] + (qyN - qyS)/Δ.η * ∂η∂y[1] )
+
     return f
 end
 
@@ -84,18 +91,18 @@ function ResidualFSG!(K, f, T, b, k, q, ∂, Δ, num, val, typ, params, Assemble
     ∂η∂y  = zeros(5)
     #-------------------------------------------#
     # Centroids
-    for i in axes(f.c,1),  j in axes(f.c,2)
-        if i>1 && i<size(f.c,1) && j>1 && j<size(f.c,2)
+    for i in axes(f.c, 1), j in axes(f.c, 2)
+        if i>1 && i<size(f.c, 1) && j>1 && j<size(f.c, 2)
 
             Tloc  .= [    T.c[i,j-1],   T.c[i-1,j],      T.c[i,j],   T.c[i+1,j],   T.c[i,j+1],   T.v[i,j],   T.v[i+1,j],   T.v[i,j+1],   T.v[i+1,j+1]]
             tloc  .= [  typ.c[i,j-1], typ.c[i-1,j],    typ.c[i,j], typ.c[i+1,j], typ.c[i,j+1], typ.v[i,j], typ.v[i+1,j], typ.v[i,j+1], typ.v[i+1,j+1]]
             vloc  .= [  val.c[i,j-1], val.c[i-1,j],    val.c[i,j], val.c[i+1,j], val.c[i,j+1], val.v[i,j], val.v[i+1,j], val.v[i,j+1], val.v[i+1,j+1]]
             nloc  .= [  num.c[i,j-1], num.c[i-1,j],    num.c[i,j], num.c[i+1,j], num.c[i,j+1], num.v[i,j], num.v[i+1,j], num.v[i,j+1], num.v[i+1,j+1]]
-            kloc  .= [                     k.ex[i-1,j],      k.ex[i,j],      k.ey[i,j-1],      k.ey[i,j]]
-            ∂ξ∂x  .= [ ∂.ξ.∂x.c[i,j], ∂.ξ.∂x.ex[i-1,j], ∂.ξ.∂x.ex[i,j], ∂.ξ.∂x.ey[i,j-1], ∂.ξ.∂x.ey[i,j]]
-            ∂ξ∂y  .= [ ∂.ξ.∂y.c[i,j], ∂.ξ.∂y.ex[i-1,j], ∂.ξ.∂y.ex[i,j], ∂.ξ.∂y.ey[i,j-1], ∂.ξ.∂y.ey[i,j]]  
-            ∂η∂x  .= [ ∂.η.∂x.c[i,j], ∂.η.∂x.ex[i-1,j], ∂.η.∂x.ex[i,j], ∂.η.∂x.ey[i,j-1], ∂.η.∂x.ey[i,j]]
-            ∂η∂y  .= [ ∂.η.∂y.c[i,j], ∂.η.∂y.ex[i-1,j], ∂.η.∂y.ex[i,j], ∂.η.∂y.ey[i,j-1], ∂.η.∂y.ey[i,j]]
+            kloc  .= [                     k.ex[i,j],      k.ex[i+1,j],      k.ey[i,j],      k.ey[i,j+1]]
+            ∂ξ∂x  .= [ ∂.ξ.∂x.c[i,j], ∂.ξ.∂x.ex[i,j], ∂.ξ.∂x.ex[i+1,j], ∂.ξ.∂x.ey[i,j], ∂.ξ.∂x.ey[i,j+1]]
+            ∂ξ∂y  .= [ ∂.ξ.∂y.c[i,j], ∂.ξ.∂y.ex[i,j], ∂.ξ.∂y.ex[i+1,j], ∂.ξ.∂y.ey[i,j], ∂.ξ.∂y.ey[i,j+1]]  
+            ∂η∂x  .= [ ∂.η.∂x.c[i,j], ∂.η.∂x.ex[i,j], ∂.η.∂x.ex[i+1,j], ∂.η.∂x.ey[i,j], ∂.η.∂x.ey[i,j+1]]
+            ∂η∂y  .= [ ∂.η.∂y.c[i,j], ∂.η.∂y.ex[i,j], ∂.η.∂y.ex[i+1,j], ∂.η.∂y.ey[i,j], ∂.η.∂y.ey[i,j+1]]
 
             f.c[i,j] = Poisson2D(Tloc, tloc, vloc, kloc, b.c[i,j], ∂ξ∂x, ∂ξ∂y, ∂η∂x, ∂η∂y, Δ, params, Frozen, false, (i=i,j=j))
 
@@ -103,7 +110,7 @@ function ResidualFSG!(K, f, T, b, k, q, ∂, Δ, num, val, typ, params, Assemble
                 ∂F∂T .= 0.
                 autodiff(Enzyme.Reverse, Poisson2D, Duplicated(Tloc, ∂F∂T), Const(tloc), Const(vloc), Const(kloc), Const(b.c[i,j]), Const(∂ξ∂x), Const(∂ξ∂y), Const(∂η∂x), Const(∂η∂y), Const(Δ), Const(params), Const(Frozen), Const(false), Const( (i=i,j=j)))
                 for jeq in eachindex(nloc)
-                    if abs(∂F∂T[jeq])>0.
+                    if abs(∂F∂T[jeq])>1e-8
                         K[nloc[3],nloc[jeq]] = ∂F∂T[jeq]
                     end
                 end
@@ -123,19 +130,23 @@ function ResidualFSG!(K, f, T, b, k, q, ∂, Δ, num, val, typ, params, Assemble
                 tloc  .= [typ.v[i,j-1],  typ.v[i-1,j],  typ.v[i,j],  typ.v[i+1,j], typ.v[i,j+1], typ.c[i-1,j-1], typ.c[i,j-1], typ.c[i-1,j], typ.c[i,j]]
                 vloc  .= [val.v[i,j-1],  val.v[i-1,j],  val.v[i,j],  val.v[i+1,j], val.v[i,j+1], val.c[i-1,j-1], val.c[i,j-1], val.c[i-1,j], val.c[i,j]]
                 nloc  .= [num.v[i,j-1],  num.v[i-1,j],  num.v[i,j],  num.v[i+1,j], num.v[i,j+1], num.c[i-1,j-1], num.c[i,j-1], num.c[i-1,j], num.c[i,j]]
-                kloc  .= [                     k.ey[i-1,j-1],      k.ey[i,j-1],      k.ex[i-1,j-1],      k.ex[i-1,j]]
-                ∂ξ∂x  .= [ ∂.ξ.∂x.v[i,j], ∂.ξ.∂x.ey[i-1,j-1], ∂.ξ.∂x.ey[i,j-1], ∂.ξ.∂x.ex[i-1,j-1], ∂.ξ.∂x.ex[i-1,j]]
-                ∂ξ∂y  .= [ ∂.ξ.∂y.v[i,j], ∂.ξ.∂y.ey[i-1,j-1], ∂.ξ.∂y.ey[i,j-1], ∂.ξ.∂y.ex[i-1,j-1], ∂.ξ.∂y.ex[i-1,j]]  
-                ∂η∂x  .= [ ∂.η.∂x.v[i,j], ∂.η.∂x.ey[i-1,j-1], ∂.η.∂x.ey[i,j-1], ∂.η.∂x.ex[i-1,j-1], ∂.η.∂x.ex[i-1,j]]
-                ∂η∂y  .= [ ∂.η.∂y.v[i,j], ∂.η.∂y.ey[i-1,j-1], ∂.η.∂y.ey[i,j-1], ∂.η.∂y.ex[i-1,j-1], ∂.η.∂y.ex[i-1,j]]
+                kloc  .= [                     k.ey[i-1,j],      k.ey[i,j],      k.ex[i,j-1],      k.ex[i,j]]
+                ∂ξ∂x  .= [ ∂.ξ.∂x.v[i,j], ∂.ξ.∂x.ey[i-1,j], ∂.ξ.∂x.ey[i,j], ∂.ξ.∂x.ex[i,j-1], ∂.ξ.∂x.ex[i,j]]
+                ∂ξ∂y  .= [ ∂.ξ.∂y.v[i,j], ∂.ξ.∂y.ey[i-1,j], ∂.ξ.∂y.ey[i,j], ∂.ξ.∂y.ex[i,j-1], ∂.ξ.∂y.ex[i,j]]  
+                ∂η∂x  .= [ ∂.η.∂x.v[i,j], ∂.η.∂x.ey[i-1,j], ∂.η.∂x.ey[i,j], ∂.η.∂x.ex[i,j-1], ∂.η.∂x.ex[i,j]]
+                ∂η∂y  .= [ ∂.η.∂y.v[i,j], ∂.η.∂y.ey[i-1,j], ∂.η.∂y.ey[i,j], ∂.η.∂y.ex[i,j-1], ∂.η.∂y.ex[i,j]]
                 
                 f.v[i,j] = Poisson2D(Tloc, tloc, vloc, kloc, b.v[i,j], ∂ξ∂x, ∂ξ∂y, ∂η∂x, ∂η∂y, Δ, params, Frozen, true,  (i=i,j=j))
 
                 if Assemble==true
                     ∂F∂T .= 0.
-                    autodiff(Enzyme.Reverse, Poisson2D, Duplicated(Tloc, ∂F∂T), Const(tloc), Const(vloc), Const(kloc), Const(b.c[i,j]), Const(∂ξ∂x), Const(∂ξ∂y), Const(∂η∂x), Const(∂η∂y), Const(Δ), Const(params), Const(Frozen), Const(true), Const( (i=i,j=j)))
+                    autodiff(Enzyme.Reverse, Poisson2D, Duplicated(Tloc, ∂F∂T), Const(tloc), Const(vloc), Const(kloc), Const(b.v[i,j]), Const(∂ξ∂x), Const(∂ξ∂y), Const(∂η∂x), Const(∂η∂y), Const(Δ), Const(params), Const(Frozen), Const(true), Const( (i=i,j=j)))
                     for jeq in eachindex(nloc)
-                        if abs(∂F∂T[jeq])>0.
+                        if abs(∂F∂T[jeq])>1e-8
+                            # @show jeq
+                            # @show nloc[3]
+                            # @show ∂F∂T[jeq]
+                            # @show tloc
                             K[nloc[3],nloc[jeq]] = ∂F∂T[jeq]
                         end
                     end
@@ -242,53 +253,53 @@ end
 
 function ComputeConductivity!(k, q, T, typ, val, params, nc, ∂, Δ)
     for j in axes(k.ex,2), i in axes(k.ex,1)
-        if j>1 && j<nc.y+2
-        tBC = (W=:Internal, E=:Internal, S=:Internal, N=:Internal)
-        vBC = (W=0.,        E=0.,        S=0.,        N=0.)
-        tBC  = (W=typ.c[i,j], E=typ.c[i+1,j], S=typ.v[i+1,j], N=typ.v[i+1,j+1])
-        if i==1
-            vBC  = (W=val.c[i,j], E=val.c[i+1,j], S=val.v[i+1,j], N=val.v[i+1,j+1], EE=val.c[i+2,j])
-        elseif i==size(k.ex,1)
-            vBC  = (W=val.c[i,j], E=val.c[i+1,j], S=val.v[i+1,j], N=val.v[i+1,j+1], WW=val.c[i-1,j])
+        if i>1 && i<nc.x+3 && j>1 && j<nc.y+2
+            tBC = (W=:Internal, E=:Internal, S=:Internal, N=:Internal)
+            vBC = (W=0.,        E=0.,        S=0.,        N=0.)
+            tBC  = (W=typ.c[i-1,j], E=typ.c[i,j], S=typ.v[i,j], N=typ.v[i,j+1])
+            if i==1
+                vBC  = (W=val.c[i-1,j], E=val.c[i,j], S=val.v[i,j], N=val.v[i,j+1], EE=val.c[i+1,j])
+            elseif i==size(k.ex,1)
+                vBC  = (W=val.c[i-1,j], E=val.c[i,j], S=val.v[i,j], N=val.v[i,j+1], WW=val.c[i-2,j])
+            else
+                vBC  = (W=val.c[i-1,j], E=val.c[i,j], S=val.v[i,j], N=val.v[i,j+1])
+            end
+            Tloc        = (W=  T.c[i-1,j], E=  T.c[i,j], S=  T.v[i,j], N=  T.v[i,j+1])
+            ∂ξ          = (∂x=∂.ξ.∂x.ex[i,j], ∂y=∂.ξ.∂y.ex[i,j])
+            ∂η          = (∂x=∂.η.∂x.ex[i,j], ∂y=∂.η.∂y.ex[i,j])
+            ∂T∂x, ∂T∂y  = GradientLoc1(Tloc, Δ, tBC, vBC; ∂ξ=∂ξ, ∂η=∂η )
+            isin        = tBC.W==0 && tBC.E==0 && tBC.S==0  && tBC.N==0 
+            k.ex[i,j]   = EvaluateConductivity( params, ∂T∂x, ∂T∂y, isin)
+            q.x.ex[i,j] = -k.ex[i,j]*∂T∂x
+            q.y.ex[i,j] = -k.ex[i,j]*∂T∂y
         else
-            vBC  = (W=val.c[i,j], E=val.c[i+1,j], S=val.v[i+1,j], N=val.v[i+1,j+1])
-        end
-        Tloc        = (W=  T.c[i,j], E=  T.c[i+1,j], S=  T.v[i+1,j], N=  T.v[i+1,j+1])
-        ∂ξ          = (∂x=∂.ξ.∂x.ex[i,j], ∂y=∂.ξ.∂y.ex[i,j])
-        ∂η          = (∂x=∂.η.∂x.ex[i,j], ∂y=∂.η.∂y.ex[i,j])
-        ∂T∂x, ∂T∂y  = GradientLoc1(Tloc, Δ, tBC, vBC; ∂ξ=∂ξ, ∂η=∂η )
-        isin        = tBC.W==0 && tBC.E==0 && tBC.S==0  && tBC.N==0 
-        k.ex[i,j]   = EvaluateConductivity( params, ∂T∂x, ∂T∂y, isin)
-        q.x.ex[i,j] = -k.ex[i,j]*∂T∂x
-        q.y.ex[i,j] = -k.ex[i,j]*∂T∂y
-    else
-        k.ex[i,j]   = params.kBC
-        end
+            k.ex[i,j]   = params.kBC
+            end
     end
     
     for j in axes(k.ey,2), i in axes(k.ey,1)
-        if i>1 && i<nc.x+2 
-        tBC = (W=:Internal, E=:Internal, S=:Internal, N=:Internal)
-        vBC = (W=0.,        E=0.,        S=0.,        N=0.)
-        tBC         = (W=typ.v[i,j+1], E=typ.v[i+1,j+1], S=typ.c[i,j], N=typ.c[i,j+1])
-        if j==1
-            vBC         = (W=val.v[i,j+1], E=val.v[i+1,j+1], S=val.c[i,j], N=val.c[i,j+1], NN=val.c[i,j+2])
-        elseif j==size(k.ey,2)
-            vBC         = (W=val.v[i,j+1], E=val.v[i+1,j+1], S=val.c[i,j], N=val.c[i,j+1], SS=val.c[i,j-1])
+        if i>1 && i<nc.x+2 && j>1 && j<nc.y+3
+            tBC = (W=:Internal, E=:Internal, S=:Internal, N=:Internal)
+            vBC = (W=0.,        E=0.,        S=0.,        N=0.)
+            tBC         = (W=typ.v[i,j], E=typ.v[i+1,j], S=typ.c[i,j-1], N=typ.c[i,j])
+            if j==1
+                vBC         = (W=val.v[i,j], E=val.v[i+1,j], S=val.c[i,j-1], N=val.c[i,j], NN=val.c[i,j+1])
+            elseif j==size(k.ey,2)
+                vBC         = (W=val.v[i,j], E=val.v[i+1,j], S=val.c[i,j-1], N=val.c[i,j], SS=val.c[i,j-2])
+            else
+                vBC         = (W=val.v[i,j], E=val.v[i+1,j], S=val.c[i,j-1], N=val.c[i,j])
+            end
+            Tloc        = (W=T.v[i,j], E=T.v[i+1,j], S=T.c[i,j-1], N=T.c[i,j])
+            ∂ξ          = (∂x=∂.ξ.∂x.ey[i,j], ∂y=∂.ξ.∂y.ey[i,j])
+            ∂η          = (∂x=∂.η.∂x.ey[i,j], ∂y=∂.η.∂y.ey[i,j])
+            ∂T∂x, ∂T∂y  = GradientLoc1(Tloc, Δ, tBC, vBC; ∂ξ=∂ξ, ∂η=∂η )
+            isin        = tBC.W==0 && tBC.E==0 && tBC.S==0  && tBC.N==0 
+            k.ey[i,j]   = EvaluateConductivity( params, ∂T∂x, ∂T∂y, isin)
+            q.x.ey[i,j] = -k.ey[i,j]*∂T∂x
+            q.y.ey[i,j] = -k.ey[i,j]*∂T∂y
         else
-            vBC         = (W=val.v[i,j+1], E=val.v[i+1,j+1], S=val.c[i,j], N=val.c[i,j+1])
-        end
-        Tloc        = (W=T.v[i,j+1], E=T.v[i+1,j+1], S=T.c[i,j], N=T.c[i,j+1])
-        ∂ξ          = (∂x=∂.ξ.∂x.ey[i,j], ∂y=∂.ξ.∂y.ey[i,j])
-        ∂η          = (∂x=∂.η.∂x.ey[i,j], ∂y=∂.η.∂y.ey[i,j])
-        ∂T∂x, ∂T∂y  = GradientLoc1(Tloc, Δ, tBC, vBC; ∂ξ=∂ξ, ∂η=∂η )
-        isin        = tBC.W==0 && tBC.E==0 && tBC.S==0  && tBC.N==0 
-        k.ey[i,j]   = EvaluateConductivity( params, ∂T∂x, ∂T∂y, isin)
-        q.x.ey[i,j] = -k.ey[i,j]*∂T∂x
-        q.y.ey[i,j] = -k.ey[i,j]*∂T∂y
-    else
-        k.ey[i,j]   = params.kBC
-        end
+            k.ey[i,j]   = params.kBC
+            end
     end
     return
 end

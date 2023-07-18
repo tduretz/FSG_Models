@@ -72,7 +72,9 @@ function GradientLoc1(u, Δ, tBC, vBC; k=(;W=1.0, E=1.0, S=1.0, N=1.0), BC_order
     end
     #--------------------------------
     # Gradients
-    ∂u∂x = (u_East  - u_West )/Δ.ξ * ∂ξ.∂x + (u_North - u_South)/Δ.η * ∂η.∂x
-    ∂u∂y = (u_East  - u_West )/Δ.ξ * ∂ξ.∂y + (u_North - u_South)/Δ.η * ∂η.∂y
+    dudξ = (u_East  - u_West )/Δ.ξ
+    dudη = (u_North - u_South)/Δ.η
+    ∂u∂x = dudξ * ∂ξ.∂x + dudη * ∂η.∂x
+    ∂u∂y = dudξ * ∂ξ.∂y + dudη * ∂η.∂y
     return ∂u∂x, ∂u∂y
 end

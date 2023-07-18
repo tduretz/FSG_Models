@@ -10,7 +10,7 @@ function KSP_GCR!( x::Vector{Float64}, M::SparseMatrixCSC{Float64, Int64}, b::Ve
     # KSP GCR solver
     norm_r, norm0 = 0.0, 0.0
     N               = length(x)
-    maxit           = 10*restart
+    maxit           = 1000*restart
     ncyc, its       = 0, 0
     i1, i2, success = 0, 0, 0
     #

@@ -44,7 +44,7 @@ end
 
 ###############################
 
-function Mesh_x( X, x0, m, xmin0, xmax0, σx, options; h=0.0 )
+function Mesh_x( X, x0, y0, m, xmin0, xmax0, Amp, σx, σy, options )
 if options.swiss_x
         xmin1 = (sinh.( σx.*(xmin0.-x0) ))
         xmax1 = (sinh.( σx.*(xmax0.-x0) ))
@@ -58,7 +58,7 @@ end
 
 ###############################
 
-function Mesh_y( X, y0, m, ymin0, ymax0, σy, options; h=0.0 )
+function Mesh_y( X, x0, y0, m, ymin0, ymax0, Amp, σx, σy, options )
     # y0    = ymax0
     y     = X[2]
     if options.swiss_y
@@ -68,6 +68,7 @@ function Mesh_y( X, y0, m, ymin0, ymax0, σy, options; h=0.0 )
         y     = (sinh.( σy.*(X[2].-y0) )) .* sy  .+ y0
     end
     if options.topo
+        h     = Amp.*exp.(-(X[1].-x0).^2 ./ σx^2) 
         z0    = -h                     # topography height
         y     = (y/ymin0)*((z0+m))-z0  # shift grid vertically
     end   
@@ -79,8 +80,8 @@ end
 @views function dhdx_num(xv4, yv4, Δ)
     #  ∂h∂ξ * ∂ξ∂x + ∂h∂η * ∂η∂x
     ∂h∂x = zero(xv4[:,end])
-    ∂h∂x[2:2:end-1] .= (yv4[3:2:end-0,end-1] .- yv4[1:2:end-2,end-1])./Δ.ξ
-    ∂h∂x[3:2:end-2] .= (yv4[4:2:end-1,end-1] .- yv4[2:2:end-3,end-1])./Δ.ξ
+    ∂h∂x[2:2:end-1] .= (yv4[3:2:end-0,end-2] .- yv4[1:2:end-2,end-2])./Δ.ξ
+    ∂h∂x[3:2:end-2] .= (yv4[4:2:end-1,end-2] .- yv4[2:2:end-3,end-2])./Δ.ξ
     ∂h∂x[[1 end]]   .= ∂h∂x[[2 end-1]]   
     return ∂h∂x
 end
@@ -103,7 +104,7 @@ end
     # ----------------------
     ∂y.∂η[:,2:2:end-1] .= (yv4[:,3:2:end-0] .- yv4[:,1:2:end-2])./Δ.η
     ∂y.∂η[:,3:2:end-2] .= (yv4[:,4:2:end-1] .- yv4[:,2:2:end-3])./Δ.η
-    ∂y.∂η[:,[1 end]]   .= ∂y.∂η[:,[2 end-1]]    
+    ∂y.∂η[:,[1 end]]   .= ∂y.∂η[:,[2 end-1]]   
     # ----------------------
     # @printf("min(∂x∂ξ) = %1.6f --- max(∂x∂ξ) = %1.6f\n", minimum(∂x.∂ξ), maximum(∂x.∂ξ))
     # @printf("min(∂x∂η) = %1.6f --- max(∂x∂η) = %1.6f\n", minimum(∂x.∂η), maximum(∂x.∂η))
@@ -121,7 +122,6 @@ function InverseJacobian!(∂ξ,∂η,∂x,∂y)
         M[1,2]   = ∂x.∂η[i]
         M[2,1]   = ∂y.∂ξ[i]
         M[2,2]   = ∂y.∂η[i]
-        # display(M)
         invJ     = inv(M)
         ∂ξ.∂x[i] = invJ[1,1]
         ∂ξ.∂y[i] = invJ[1,2]
@@ -130,7 +130,8 @@ function InverseJacobian!(∂ξ,∂η,∂x,∂y)
     end
     @printf("min(∂ξ∂x) = %1.6f --- max(∂ξ∂x) = %1.6f\n", minimum(∂ξ.∂x), maximum(∂ξ.∂x))
     @printf("min(∂ξ∂y) = %1.6f --- max(∂ξ∂y) = %1.6f\n", minimum(∂ξ.∂y), maximum(∂ξ.∂y))
-    @printf("min(∂η∂x) = %1.6f --- max(∂η∂x) = %1.6f\n", minimum(∂η.∂x), maximum(∂η.∂x))
+    # @printf("min(∂η∂x) = %1.6f --- max(∂η∂x) = %1.6f\n", minimum(∂η.∂x), maximum(∂η.∂x))
+    @printf("min(∂η∂x) = %1.6f --- max(∂η∂x) = %1.6f\n", minimum(∂η.∂x[2:end-1,2:end-1]), maximum(∂η.∂x[2:end-1,2:end-1]))
     @printf("min(∂η∂y) = %1.6f --- max(∂η∂y) = %1.6f\n", minimum(∂η.∂y), maximum(∂η.∂y))
     return nothing
 end

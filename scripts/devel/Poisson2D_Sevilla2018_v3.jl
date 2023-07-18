@@ -11,49 +11,47 @@ function b_anal(x, y)
     return (-A .* a .^ 2 .* sin(a .* x + b .* y) - A .* b .^ 2 .* sin(a .* x + b .* y) - B .* c .^ 2 .* cos(c .* x + d .* y) - B .* d .^ 2 .* cos(c .* x + d .* y) + (A .* a .* cos(a .* x + b .* y) - B .* c .* sin(c .* x + d .* y)) .^ 2 + (A .* b .* cos(a .* x + b .* y) - B .* d .* sin(c .* x + d .* y)) .^ 2) .* exp(A .* sin(a .* x + b .* y) + B .* cos(c .* x + d .* y))
 end
 
-function Gradient_ex(TW, TE, TS, TN, Δ, BCx, TBC)
-    ∂T∂y = 0.0; ∂T∂x = 0.0
-    if BCx==:Wc
-        ∂T∂x = (TE - (2*TBC-TE))/Δ.ξ
-    elseif BCx==:Wv 
-        ∂T∂x = (TE - TBC)/Δ.ξ
-    elseif BCx==:Ec
-        ∂T∂x = ((2*TBC-TW) - TW)/Δ.ξ 
-    elseif BCx==:Ev
-        ∂T∂x = (TBC  - TW)/Δ.ξ 
-    else
-        ∂T∂x = (TE - TW)/Δ.ξ
-        ∂T∂y = (TN - TS)/Δ.η
-    end
-    return ∂T∂x, ∂T∂y
-end
-
-function Gradient_ey(TW, TE, TS, TN, Δ, BCy, TBC)
-    ∂T∂y = 0.0; ∂T∂x = 0.0
-    if BCy==:Sc
-        ∂T∂y = (TN -(2*TBC-TN))/Δ.η
-    elseif BCy==:Sv
-        ∂T∂y = (TN - TBC )/Δ.η
-    elseif BCy==:Nc
-        ∂T∂y = ((2*TBC-TS) - TS)/Δ.η  
-    elseif BCy==:Nv
-        ∂T∂y = (TBC  - TS)/Δ.η  
-    else
-        ∂T∂x = (TE - TW)/Δ.ξ
-        ∂T∂y = (TN - TS)/Δ.η
-    end
-    return ∂T∂x, ∂T∂y
-end
-
 function Poisson2D( T, b, Δ, BCx, BCy, TBC )
     k0 = 1.0
     kW, kE, kS, kN = 1.0, 1.0, 1.0, 1.0 
     ∂T∂yW, ∂T∂yE = 0.0, 0.0
     ∂T∂xS, ∂T∂xN = 0.0, 0.0
-    ∂T∂xW, ∂T∂yW = Gradient_ex(T[2], T[3], T[6], T[8], Δ, BCx.W, TBC)
-    ∂T∂xE, ∂T∂yE = Gradient_ex(T[3], T[4], T[7], T[9], Δ, BCx.E, TBC)
-    ∂T∂xS, ∂T∂yS = Gradient_ey(T[6], T[7], T[1], T[3], Δ, BCy.S, TBC)
-    ∂T∂xN, ∂T∂yN = Gradient_ey(T[8], T[9], T[3], T[5], Δ, BCy.N, TBC)
+    if BCx==:Wc
+        ∂T∂xW = (T[3] - (2*TBC-T[3]))/Δ.ξ
+        ∂T∂xE = (T[4] - T[3])/Δ.ξ
+    elseif BCx==:Wv 
+        ∂T∂xW = (T[3] - TBC )/Δ.ξ
+        ∂T∂xE = (T[4] - T[3])/Δ.ξ
+    elseif BCx==:Ec
+        ∂T∂xW = (T[3] - T[2])/Δ.ξ
+        ∂T∂xE = ((2*TBC-T[3]) - T[3])/Δ.ξ 
+    elseif BCx==:Ev
+        ∂T∂xW = (T[3] - T[2])/Δ.ξ
+        ∂T∂xE = (TBC  - T[3])/Δ.ξ 
+    else
+        ∂T∂xW = (T[3] - T[2])/Δ.ξ
+        ∂T∂xE = (T[4] - T[3])/Δ.ξ
+        ∂T∂yW = (T[8] - T[6])/Δ.η
+        ∂T∂yE = (T[9] - T[7])/Δ.η
+    end
+    if BCy==:Sc
+        ∂T∂yS = (T[3] -(2*TBC-T[3]))/Δ.η
+        ∂T∂yN = (T[5] - T[3])/Δ.η
+    elseif BCy==:Sv
+        ∂T∂yS = (T[3] - TBC )/Δ.η
+        ∂T∂yN = (T[5] - T[3])/Δ.η
+    elseif BCy==:Nc
+        ∂T∂yS = (T[3] - T[1])/Δ.η
+        ∂T∂yN = ((2*TBC-T[3]) - T[3])/Δ.η  
+    elseif BCy==:Nv
+        ∂T∂yS = (T[3] - T[1])/Δ.η
+        ∂T∂yN = (TBC  - T[3])/Δ.η  
+    else
+        ∂T∂yS = (T[3] - T[1])/Δ.η
+        ∂T∂yN = (T[5] - T[3])/Δ.η
+        ∂T∂xS = (T[7] - T[6])/Δ.ξ
+        ∂T∂xN = (T[9] - T[8])/Δ.ξ
+    end
     # Non-linearity
     # kW = k0*sqrt(∂T∂xW.^2 + ∂T∂yW.^2)
     # kE = k0*sqrt(∂T∂xE.^2 + ∂T∂yE.^2)
@@ -69,7 +67,7 @@ function Poisson2D( T, b, Δ, BCx, BCy, TBC )
     return f
 end
 
-function ResidualFSG!(K, f, T, b, x, y, Δ, num, val, typ, Assemble)
+function ResidualFSG!(K, f, T, b, x, y, Δ, num, typ, Assemble)
 
     Tloc = zeros(9)
     ∂F∂T = zeros(9)
@@ -80,24 +78,32 @@ function ResidualFSG!(K, f, T, b, x, y, Δ, num, val, typ, Assemble)
     # Centroids
     for j in axes(f.c,2), i in axes(f.c,1)
         if i>1 && i<size(f.c,1) && j>1 && j<size(f.c,2)
-            BCx   = (W=:Internal, E=:Internal)
-            BCy   = (S=:Internal, N=:Internal)
+            BCx   = :Internal
+            BCy   = :Internal
             Tloc .= [  T.c[i,j-1],   T.c[i-1,j],   T.c[i,j],   T.c[i+1,j],   T.c[i,j+1],   T.v[i-1,j-1],   T.v[i,j-1],   T.v[i-1,j],   T.v[i,j]]
             nloc .= [num.c[i,j-1], num.c[i-1,j], num.c[i,j], num.c[i+1,j], num.c[i,j+1], num.v[i-1,j-1], num.v[i,j-1], num.v[i-1,j], num.v[i,j]]
             
             if typ.c[i-1,j]==2
-                BCx = (W=:Wc, E=:Internal)
-                TBC = val.c[i-1,j]
+                BCx = :Wc
+                x0  = 0.5*(x.c[i-1] + x.c[i])
+                y0  = y.c[j]
+                TBC = u_anal(x0, y0)
             elseif typ.c[i+1,j]==2
-                BCx = (W=:Internal, E=:Ec) 
-                TBC = val.c[i+1,j]
+                BCx = :Ec
+                x0  = 0.5*(x.c[i+1] + x.c[i])
+                y0  = y.c[j]
+                TBC = u_anal(x0, y0)
             end
             if typ.c[i,j-1]==2
-                BCy = (S=:Sc, N=:Internal)
-                TBC = val.c[i,j-1]
+                BCy = :Sc
+                x0  = x.c[i]
+                y0  = 0.5*(y.c[j-1] + y.c[j])
+                TBC = u_anal(x0, y0)
             elseif typ.c[i,j+1]==2
-                BCy = (S=:Internal, N=:Nc)
-                TBC = val.c[i,j+1]
+                BCy = :Nc
+                x0  = x.c[i]
+                y0  = 0.5*(y.c[j+1] + y.c[j])
+                TBC = u_anal(x0, y0)
             end
 
             f.c[i,j] = Poisson2D(Tloc, b.c[i,j], Δ, BCx, BCy, TBC)
@@ -112,7 +118,7 @@ function ResidualFSG!(K, f, T, b, x, y, Δ, num, val, typ, Assemble)
                 end
             end
         elseif typ.c[i,j]==1
-            f[i,j]                    = 0.0
+            f[i,j] = 0.0
             K[num.c[i,j], num.c[i,j]] = 1.0
         end
     end
@@ -121,25 +127,33 @@ function ResidualFSG!(K, f, T, b, x, y, Δ, num, val, typ, Assemble)
     # Vertices
     for j in axes(f.v,2), i in axes(f.v,1)
         if i>1 && i<size(f.v,1) && j>1 && j<size(f.v,2)
-            BCx   = (W=:Internal, E=:Internal)
-            BCy   = (S=:Internal, N=:Internal)
+            BCx   = :Internal
+            BCy   = :Internal
             Tloc .= [  T.v[i,j-1],   T.v[i-1,j],   T.v[i,j],   T.v[i+1,j],   T.v[i,j+1],   T.c[i,j],   T.c[i+1,j],   T.c[i,j+1],   T.c[i+1,j+1]]
             nloc .= [num.v[i,j-1], num.v[i-1,j], num.v[i,j], num.v[i+1,j], num.v[i,j+1], num.c[i,j], num.c[i+1,j], num.c[i,j+1], num.c[i+1,j+1]]
         
             if typ.v[i-1,j]==1
-                BCx = (W=:Wv, E=:Internal)
-                TBC = val.v[i-1,j]
+                BCx = :Wv
+                x0  = x.v[i-1]
+                y0  = y.v[j]
+                TBC = u_anal(x0, y0)
             elseif typ.v[i+1,j]==1
-                BCx = (W=:Internal, E=:Ev) 
-                TBC = val.v[i+1,j]
+                BCx = :Ev
+                x0  = x.v[i+1]
+                y0  = y.v[j]
+                TBC = u_anal(x0, y0)
             end
 
             if typ.v[i,j-1]==1
-                BCy = (S=:Sv, N=:Internal)
-                TBC = val.v[i,j-1]
+                BCy = :Sv
+                x0  = x.v[i]
+                y0  = y.v[j-1]
+                TBC = u_anal(x0, y0)
             elseif typ.v[i,j+1]==1
-                BCy = (S=:Internal, N=:Nv)
-                TBC = val.v[i,j+1]
+                BCy = :Nv
+                x0  = x.v[i]
+                y0  = y.v[j+1]
+                TBC = u_anal(x0, y0)
             end
 
             f.v[i,j] = Poisson2D(Tloc, b.v[i,j], Δ, BCx, BCy, TBC)
@@ -154,7 +168,7 @@ function ResidualFSG!(K, f, T, b, x, y, Δ, num, val, typ, Assemble)
                 end
             end
         elseif typ.v[i,j]==1
-            f.v[i,j]                  = 0.0
+            f.v[i,j] = 0.0
             K[num.v[i,j], num.v[i,j]] = 1.0
         end
     end
@@ -170,44 +184,23 @@ function main()
     xmax =  1.
     ymin =  0.
     ymax =  1.
-    nc   = (x=100, y=100)
+    nc   = (x=500, y=500)
     nv   = (x=nc.x+1, y=nc.y+1)
     nce  = (x=nc.x+2, y=nc.y+2)
-    Δ    = (ξ=(xmax-xmin)/nc.x, η=(ymax-ymin)/nc.y)
+    Δ    = (x=(xmax-xmin)/nc.x, y=(ymax-ymin)/nc.y)
     x    = (c=LinRange(xmin-Δ.ξ/2, xmax+Δ.ξ/2, nc.x+2), v=LinRange(xmin, xmax, nc.x+1))
     y    = (c=LinRange(ymin-Δ.η/2, ymax+Δ.η/2, nc.y+2), v=LinRange(ymin, ymax, nc.y+1))
+    σ    = 0.1
     T    = (c=zeros(nce...), v=zeros(nv...))
     f    = (c=zeros(nce...), v=zeros(nv...))
     b    = (c=zeros(nce...), v=zeros(nv...))
     T_an = (c=zeros(nce...), v=zeros(nv...))
     num  = (c=zeros(Int64, nce...), v=zeros(Int64, nv...))
     typ  = (c=zeros(Int64, nce...), v=zeros(Int64, nv...))
-    val  = (c=zeros(nce...), v=zeros(nv...))
-    # Boundary conditions
-    for j=1:nc.y+2
-        typ.c[1,j]   = 2
-        val.c[1,j]   = u_anal(x.v[1],   y.c[j])
-        typ.c[end,j] = 2
-        val.c[end,j] = u_anal(x.v[end], y.c[j])
-    end
-    for i=1:nc.x+2
-        typ.c[i,1]   = 2
-        val.c[i,1]   = u_anal(x.c[i], y.v[1])
-        typ.c[i,end] = 2
-        val.c[i,end] = u_anal(x.c[i], y.v[end])
-    end
-    for j=1:nv.y
-        typ.v[1,j]   = 1
-        val.v[1,j]   = u_anal(x.v[1],   y.v[j])
-        typ.v[end,j] = 1
-        val.v[end,j] = u_anal(x.v[end], y.v[j])
-    end
-    for i=1:nv.x
-        typ.v[i,1]   = 1
-        val.v[i,1]   = u_anal(x.v[i], y.v[1])
-        typ.v[i,end] = 1
-        val.v[i,end] = u_anal(x.v[i], y.v[end])
-    end
+    typ.c .= 2
+    typ.c[2:end-1,2:end-1] .= 0
+    typ.v .= 1
+    typ.v[2:end-1,2:end-1] .= 0
     b.c                    .= b_anal.(x.c, y.c')
     b.v                    .= b_anal.(x.v, y.v')
     T_an.c                 .= u_anal.(x.c, y.c')
@@ -223,7 +216,7 @@ function main()
         K    = ExtendableSparseMatrix(ndof, ndof)
         F    = zeros(ndof)
         δT   = zeros(ndof)
-        ResidualFSG!(K, f, T, b, x, y, Δ, num, val, typ, true)
+        ResidualFSG!(K, f, T, b, x, y, Δ, num, typ, true)
         @printf("Iter. %03d: %1.6e --- %1.6e\n", iter, mean(f.c), mean(f.v))
         if abs(mean(f.c))<1e-13 && abs(mean(f.v))<1e-13 break end
         F[1:nc.x*nc.y]     .= f.c[2:end-1,2:end-1][:]
@@ -233,7 +226,9 @@ function main()
         δT .= KJ\F
         T.c[2:end-1,2:end-1] .-= δT[num.c[2:end-1,2:end-1]]
         T.v                  .-= δT[num.v]
-        ResidualFSG!(K, f, T, b, x, y, Δ, num, val, typ, false)
+        ResidualFSG!(K, f, T, b, x, y, Δ, num, typ, false)
+        # @printf("%1.6e\n", mean(f.c))
+        # @printf("%1.6e\n", mean(f.v))
     end
 
     # ------------------------------------- #
